@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: NIK_MRI
+Version: 0.0.1
+Summary: Library for fitting neural implicit k-space MRI data
+Author-email: Anthony Gatti <aagatti@stanford.edu>
+License: MIT
+Project-URL: Homepage, https://github.com/gattia/NIK_MRI/
+Keywords: python
+Classifier: Development Status :: 3 - Alpha
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Topic :: Scientific/Engineering
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+
+pip install -e .
