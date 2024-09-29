@@ -1,0 +1,52 @@
+# data config
+# data_root: /home/wenqi/Data0/kcl_noncartesian/CINE/data/
+# data_root: /u/home/huw/Data0/
+# data_root: /data1/kcl/CINE/data/
+# subjects: [1]
+# slice: 0
+path_ktraj: /Users/gattia/Documents/Data/dynamic_mri_recon/data_extracted_marco/ktraj_cut.npy
+path_kdata: /Users/gattia/Documents/Data/dynamic_mri_recon/data_extracted_marco/kspace_cut.npy
+path_smaps: /Users/gattia/Documents/Data/dynamic_mri_recon/data_extracted_marco/sens_maps.npy
+path_run_num: /Users/gattia/Documents/Data/dynamic_mri_recon/NIK_MRI/configs/run.yaml
+model_checkpoints: /Users/gattia/Documents/Data/dynamic_mri_recon/NIK_MRI/model_checkpoints
+device: mps #mps = apple metal, cuda = nvidia gpu, cpu = cpu
+seed: 32
+system: laptop
+coil_select: [4,5,6,12,13,14] #[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18] #
+batch_size: 30000 #30000
+num_workers: 6
+sample_per_epoch: 100
+random_sample: False
+sample_spoke: False
+
+
+# model config for mlp
+model: siren
+coord_dim: 5
+num_layers: 8
+feature_dim:  512
+out_dim: 1
+
+# train config
+num_steps: 50000
+lr: 3e-5
+
+# loss config
+loss_type: hdr_ff #weighted_l1 #weighted_l1
+hdr_eps: 1e-2
+hdr_ff_sigma: 1
+hdr_ff_factor: 0
+
+# recon config
+nt: 3
+nx: 200
+ny: 200
+nz: 30
+recon_batchsize: 30000
+
+
+# experiment summary config
+exp_summary: wandb
+# wandb config
+wandb_entity: aagatti
+wandb_project: dynamic_knee_nik

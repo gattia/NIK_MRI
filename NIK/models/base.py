@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 from abc import abstractmethod, ABC
-from utils.mri import ifft2c_mri, coilcombine
-from utils.loss import HDRLoss_FF, AdaptiveHDRLoss
+# from NIK.utils.mri import ifft2c_mri, coilcombine
+from NIK.utils.loss import HDRLoss_FF, AdaptiveHDRLoss
 
 
 """
@@ -38,7 +38,7 @@ class NIKBase(nn.Module, ABC):
         self.config = config
         # needed for both training and testing
         # will be set in corresponding functions
-        self.device = torch.device('cuda')
+        self.device = torch.device(config['device'])
         self.network = None
         self.output = None
 
@@ -83,7 +83,7 @@ class NIKBase(nn.Module, ABC):
                 project=self.config['wandb_project'], 
                 name=self.exp_id,
                 config=self.config,
-                group=f'{self.config["num_cardiac_cycles"]} heartbeats',
+                # group=f'{self.config["num_cardiac_cycles"]} heartbeats',
                 entity=self.config['wandb_entity']
             )
 
@@ -108,10 +108,10 @@ class NIKBase(nn.Module, ABC):
         self.create_optimizer()
 
         # TODO: add lr scheduler to training
-
-        exp_id = "_".join([self.config['slice_name'], f"{self.config['num_cardiac_cycles']}_{self.config['hdr_ff_factor']}"])
+        
+        exp_id = "_".join([self.config['system'], str(self.config['run_number'])])
         self.exp_id = exp_id
-        self.model_save_path = os.path.join('model_checkpoints', exp_id)
+        self.model_save_path = os.path.join(self.config['model_checkpoints'], exp_id)
         if not os.path.exists(self.model_save_path):
             os.makedirs(self.model_save_path)
         self.init_expsummary()
@@ -193,64 +193,79 @@ class NIKBase(nn.Module, ABC):
         loss.backward()
         self.optimizer.step()
         return loss
-
-    def test_batch(self, sample=None):
+    
+    def recon_image(self):
         """
-        Test the network with a cartesian grid.
-        if sample is not None, it will return image combined with coil sensitivity.
+        Reconstruct the image from the k-space data.
         """
-        with torch.no_grad():
-            nt = self.config['nt']
-            nx = self.config['nx']
-            ny = self.config['ny']
+        
+        # create the k-space trajectory as just the 
+        # density we want along each of the x-y-z, time
+        # and coil dimensions. Do this in a nested for
+        # loop over time and coil dimensions. For each 
+        # inner loop apply the ifft to the 3D kspace data
+        # to get the image data. Then apply the images
+        # by the coil sensitivity maps and sum them up. 
+        
+        pass
 
-            ts = torch.linspace(-1+1/nt, 1-1/nt, nt)
-            kxs = torch.linspace(-1, 1-2/nx, nx)
-            kys = torch.linspace(-1, 1-2/ny, ny)
-            nc = len(self.config['coil_select'])
-            kc = torch.linspace(-1, 1, nc)
+    # def test_batch(self, sample=None):
+    #     """
+    #     Test the network with a cartesian grid.
+    #     if sample is not None, it will return image combined with coil sensitivity.
+    #     """
+    #     with torch.no_grad():
+    #         nt = self.config['nt']
+    #         nx = self.config['nx']
+    #         ny = self.config['ny']
 
-            # TODO: disgard the outside coordinates before prediction
-            grid_coords = torch.stack(torch.meshgrid(ts, kxs, kys, kc, indexing='ij'), -1).to(self.device) # nt, nx, ny, nc, 4
-            dist_to_center = torch.sqrt(grid_coords[:,:,:,:,1]**2 + grid_coords[:,:,:,:,2]**2)
+    #         ts = torch.linspace(-1+1/nt, 1-1/nt, nt)
+    #         kxs = torch.linspace(-1, 1-2/nx, nx)
+    #         kys = torch.linspace(-1, 1-2/ny, ny)
+    #         nc = len(self.config['coil_select'])
+    #         kc = torch.linspace(-1, 1, nc)
 
-            # split t for memory saving
-            t_split = 3
-            t_split_num = np.ceil(nt / t_split).astype(int)
+    #         # TODO: disgard the outside coordinates before prediction
+    #         grid_coords = torch.stack(torch.meshgrid(ts, kxs, kys, kc, indexing='ij'), -1).to(self.device) # nt, nx, ny, nc, 4
+    #         dist_to_center = torch.sqrt(grid_coords[:,:,:,:,1]**2 + grid_coords[:,:,:,:,2]**2)
 
-            kpred_list = []
-            for t_batch in range(t_split_num):
-                grid_coords_batch = grid_coords[t_batch*t_split:(t_batch+1)*t_split]
+    #         # split t for memory saving
+    #         t_split = 3
+    #         t_split_num = np.ceil(nt / t_split).astype(int)
 
-                grid_coords_batch = grid_coords_batch.reshape(-1, 4).requires_grad_(False)
-                # get prediction
-                kpred_batch = self.forward(grid_coords_batch)
-                kpred.append(kpred_batch)
-            kpred = torch.concat(kpred, 0)
+    #         kpred_list = []
+    #         for t_batch in range(t_split_num):
+    #             grid_coords_batch = grid_coords[t_batch*t_split:(t_batch+1)*t_split]
+
+    #             grid_coords_batch = grid_coords_batch.reshape(-1, 4).requires_grad_(False)
+    #             # get prediction
+    #             kpred_batch = self.forward(grid_coords_batch)
+    #             kpred.append(kpred_batch)
+    #         kpred = torch.concat(kpred, 0)
             
-            kpred_list.append(kpred)
-            kpred = torch.mean(torch.stack(kpred_list, 0), 0) #* filter_value.reshape(-1, 1)
+    #         kpred_list.append(kpred)
+    #         kpred = torch.mean(torch.stack(kpred_list, 0), 0) #* filter_value.reshape(-1, 1)
 
 
-            # TODO: clearning this part of code
-            if sample is not None:
-                sensitivity_map = sample['sensitivity_map']
+    #         # TODO: clearning this part of code
+    #         if sample is not None:
+    #             sensitivity_map = sample['sensitivity_map']
 
-                kpred = kpred.reshape(nt, nx, ny, -1)
-                k_outer = 1
-                kpred[dist_to_center>=k_outer] = 0
-                kpred = kpred.permute(0, 3, 1, 2)
-                coil_img = ifft2c_mri(kpred)
+    #             kpred = kpred.reshape(nt, nx, ny, -1)
+    #             k_outer = 1
+    #             kpred[dist_to_center>=k_outer] = 0
+    #             kpred = kpred.permute(0, 3, 1, 2)
+    #             coil_img = ifft2c_mri(kpred)
 
-                k_img = kpred[:,0,:,:].abs().unsqueeze(1).detach().cpu().numpy()        # nt, nx, ny   
-                # combined_img_motion = coil_img_motion.abs()
-                combined_img = coilcombine(coil_img, coil_dim=1, csm=sensitivity_map)
-                combined_phase = torch.angle(combined_img).detach().cpu().numpy()
-                combined_mag = combined_img.abs()
-                k_img = np.log(np.abs(k_img) + 1e-4)
+    #             k_img = kpred[:,0,:,:].abs().unsqueeze(1).detach().cpu().numpy()        # nt, nx, ny   
+    #             # combined_img_motion = coil_img_motion.abs()
+    #             combined_img = coilcombine(coil_img, coil_dim=1, csm=sensitivity_map)
+    #             combined_phase = torch.angle(combined_img).detach().cpu().numpy()
+    #             combined_mag = combined_img.abs()
+    #             k_img = np.log(np.abs(k_img) + 1e-4)
 
 
-            return kpred, combined_img
+    #         return kpred, combined_img
     
 
 

@@ -11,12 +11,7 @@ class HDRLoss_FF(torch.nn.Module):
         self.factor = float(config['hdr_ff_factor'])
 
     def forward(self, input, target, kcoords, weights=None, reduce=True):
-        # target_max = target.abs().max()
-        # target /= target_max
-        # input = input / target_max
-        # input_nograd = input.clone()
-        # input_nograd = input_nograd.detach()
-        dist_to_center2 = kcoords[...,1]**2 + kcoords[...,2]**2
+        dist_to_center2 = torch.norm(kcoords[..., 2:], dim=-1)**2
         filter_value = torch.exp(-dist_to_center2/(2*self.sigma**2)).unsqueeze(-1)
 
         if input.dtype == torch.float:

@@ -13,4 +13,6 @@ Classifier: Programming Language :: Python :: 3
 Requires-Python: >=3.9
 Description-Content-Type: text/markdown
 
+mamba create --platform osx-arm64 -n dynamic_mri python=3.10 ipykernel pytorch torchvision torchaudio numpy -c pytorch-nightly
+
 pip install -e .
